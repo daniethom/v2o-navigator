@@ -2,128 +2,122 @@ import streamlit as st
 import pandas as pd
 
 # --- INITIAL SETUP ---
-st.set_page_config(page_title="V2O Navigator", layout="wide")
-st.title("🚀 V2O Navigator: RVTools Parser")
+st.set_page_config(page_title="V2O Navigator", layout="wide", page_icon="🚀")
+st.title("🚀 V2O Navigator: VMware to OpenShift Specialist Tool")
 
-# --- FUNCTIONS (The Brains) ---
+# --- FUNCTIONS ---
 
 def process_rvtools(file):
-    """
-    Enhanced parser to handle different RVTools versions and numeric formatting.
-    """
-    # Read the CSV file
+    """Parses RVTools vInfo CSV, cleans data, and handles formatting."""
     df = pd.read_csv(file)
-    df.columns = df.columns.str.strip() # Clean invisible spaces
+    df.columns = df.columns.str.strip()
 
-    # mapping of what we want : what might be in the file
     mapping = {
         'VM': 'VM',
         'CPUs': 'CPUs',
         'Memory': 'Memory',
-        'OS': 'OS according to the configuration file' # <--- Fixed name
+        'OS': 'OS according to the configuration file'
     }
 
-    # Check if these exist, if not, try to find the "closest" match
     for key, expected in mapping.items():
         if expected not in df.columns:
-            # Look for any column that contains the key (e.g. "OS")
             found = [col for col in df.columns if key in col]
             if found:
                 mapping[key] = found[0]
             else:
-                st.error(f"Could not find a column for {key}. Please check your CSV.")
+                st.error(f"Could not find a column for {key}.")
                 return None
 
-    # Filter to only the columns we need
     df = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS']]]
-
-    # Rename them to standard names for our app logic
     df.columns = ['VM', 'CPUs', 'Memory', 'OS']
 
-    # CLEAN NUMERIC DATA: Remove commas and convert to numbers
+    # Clean numeric data (handle commas)
     for col in ['CPUs', 'Memory']:
         df[col] = df[col].astype(str).str.replace(',', '').astype(float)
 
     return df
 
-# --- USER INTERFACE ---
-st.sidebar.header("1. Upload Data")
-uploaded_file = st.sidebar.file_uploader("Upload RVTools vInfo CSV", type=["csv"])
+# --- SIDEBAR: INPUTS & ASSUMPTIONS ---
+
+with st.sidebar:
+    st.header("1. Data Ingestion")
+    uploaded_file = st.file_uploader("Upload RVTools vInfo CSV", type=["csv"])
+
+    st.divider()
+
+    st.header("2. Sizing Assumptions")
+    cpu_ratio = st.slider("vCPU Consolidation Ratio", 1.0, 6.0, 3.0,
+                          help="Ratio of VM vCPUs to Physical Cores.")
+
+    node_type = st.selectbox("Worker Node Size",
+                             ["Standard (16 vCPU | 64GB RAM)",
+                              "Large (32 vCPU | 128GB RAM)",
+                              "Extra Large (64 vCPU | 256GB RAM)"])
+
+    st.divider()
+
+    st.header("3. Solution Mapping")
+    storage_option = st.selectbox("Storage Provider",
+                                  ["OpenShift Data Foundation (ODF)", "NetApp Trident", "Portworx", "IBM Ceph"])
+
+# --- MAIN DASHBOARD LOGIC ---
 
 if uploaded_file:
     data = process_rvtools(uploaded_file)
 
     if data is not None:
+        # A. Current Estate Summary
         total_vms = len(data)
         total_cpus = data['CPUs'].sum()
         total_ram_gb = data['Memory'].sum() / 1024
 
-        st.header("📋 Infrastructure Summary")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total VMs", total_vms)
-        col2.metric("Total vCPUs", int(total_cpus))
-        col3.metric("Total RAM (GB)", f"{total_ram_gb:,.0f}")
+        st.header("📋 Current VMware Estate Summary")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Total VMs", total_vms)
+        m2.metric("Total vCPUs", int(total_cpus))
+        m3.metric("Total RAM (GB)", f"{total_ram_gb:,.0f}")
 
-        # RHEL Detection
+        # B. RHEL Savings Calculation
         rhel_vms = data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]
         num_rhel = len(rhel_vms)
+        rhel_savings = num_rhel * 800 # Est. list price per guest
 
-        st.header("💰 RHEL Savings Potential")
-        st.write(f"We found **{num_rhel}** VMs running Red Hat Enterprise Linux.")
+        st.header("💰 Financial Benefits")
+        c1, c2 = st.columns(2)
+        c1.metric("Detected RHEL Guests", num_rhel)
+        c2.metric("Annual RHEL Savings", f"${rhel_savings:,}")
+        st.caption("Note: OpenShift subscriptions include RHEL entitlements for nodes.")
 
-        savings = num_rhel * 800
-        st.success(f"Potential Annual RHEL License Saving: **${savings:,}**")
+        # C. Target Sizing Logic
+        if "Standard" in node_type:
+            node_cores, node_ram = 16, 64
+        elif "Large" in node_type:
+            node_cores, node_ram = 32, 128
+        else:
+            node_cores, node_ram = 64, 256
 
-st.header("🎯 Target OpenShift Sizing")
+        req_cores = total_cpus / cpu_ratio
+        nodes_by_cpu = req_cores / node_cores
+        nodes_by_ram = total_ram_gb / node_ram
+        final_worker_nodes = int(max(nodes_by_cpu, nodes_by_ram)) + 1
 
-# 1. Sidebar Controls for Sizing
-with st.sidebar:
-    st.header("2. Sizing Assumptions")
-    cpu_ratio = st.slider("vCPU Consolidation Ratio", 1.0, 6.0, 3.0, help="How many VM vCPUs can fit on 1 Physical Core?")
-    node_type = st.selectbox("Worker Node Instance Size",
-                             ["Standard (16 vCPU | 64GB RAM)",
-                              "Large (32 vCPU | 128GB RAM)",
-                              "Extra Large (64 vCPU | 256GB RAM)"])
+        st.header(f"🎯 Target OpenShift Cluster ({storage_option})")
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Required Cores", f"{req_cores:.1f}")
+        s2.metric("Worker Nodes (N+1)", final_worker_nodes)
+        s3.metric("Target Storage", storage_option)
 
-# Define node capacities based on selection
-if "Standard" in node_type:
-    node_cores, node_ram = 16, 64
-elif "Large" in node_type:
-    node_cores, node_ram = 32, 128
-else:
-    node_cores, node_ram = 64, 256
+        # D. Edition Table
+        st.divider()
+        st.subheader("OpenShift Edition Comparison")
+        editions = {
+            "Edition": ["OVE", "OKE", "OCP", "OPP (Plus)"],
+            "ACM Included?": ["No", "No", "No", "✅ Yes"],
+            "Use Case": ["VM Focus", "Base K8s", "Full Dev Stack", "Enterprise Multi-Cluster"]
+        }
+        st.table(pd.DataFrame(editions))
 
-# 2. Calculation Logic
-# We calculate required cores based on the consolidation ratio
-required_cores = total_cpus / cpu_ratio
-# We assume RAM is 1:1 (no oversubscription for memory is safer)
-required_ram = total_ram_gb
-
-# Calculate nodes needed based on CPU vs RAM (whichever is the bottleneck)
-nodes_by_cpu = required_cores / node_cores
-nodes_by_ram = required_ram / node_ram
-base_nodes = max(nodes_by_cpu, nodes_by_ram)
-
-# Add N+1 for High Availability
-final_worker_nodes = int(base_nodes) + 1
-
-# 3. Display Sizing Results
-col1, col2, col3 = st.columns(3)
-col1.metric("Effective Cores Needed", f"{required_cores:.1f}")
-col2.metric("Worker Nodes (N+1)", final_worker_nodes)
-col3.metric("Total RAM Capacity", f"{final_worker_nodes * node_ram} GB")
-
-st.info(f"💡 **Recommendation:** Deploy **{final_worker_nodes}** worker nodes + **3** control plane (master) nodes.")
-
-# 4. OpenShift Edition Mapping
-st.header("📦 OpenShift Edition Comparison")
-edition_data = {
-    "Edition": ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"],
-    "Best For": ["VM Migration", "Basic Containers", "Full DevOps Stack", "Multi-Cluster/Security"],
-    "Includes ACM?": ["No", "No", "No", "✅ Yes"],
-    "Relative Cost": ["$", "$$", "$$$", "$$$$"]
-}
-
-st.table(edition_data)
-        with st.expander("View Cleaned Data"):
+        with st.expander("View Cleaned Data Source"):
             st.dataframe(data)
+else:
+    st.info("Please upload a vInfo CSV to begin the migration analysis.")
