@@ -5,12 +5,10 @@ from fpdf import FPDF
 import datetime
 
 # --- INITIAL SETUP ---
-st.set_page_config(page_title="V2O Navigator | Full ROI Engine", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="V2O Navigator | ROI Engine", page_icon="🚀", layout="wide")
 
 # Currency Mapping
-CURRENCIES = {
-    "USD ($)": "$", "EUR (€)": "€", "GBP (£)": "£", "ZAR (R)": "R", "AUD ($)": "A$", "SGD ($)": "S$"
-}
+CURRENCIES = {"USD ($)": "$", "EUR (€)": "€", "GBP (£)": "£", "ZAR (R)": "R", "AUD ($)": "A$", "SGD ($)": "S$"}
 
 # Custom Metric Styling
 st.markdown("""
@@ -23,32 +21,18 @@ st.markdown("""
 class ROIPDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 15)
-        self.cell(0, 10, 'V2O Navigator: Infrastructure Migration Analysis', 0, 1, 'C')
+        self.cell(0, 10, 'V2O Navigator Analysis', 0, 1, 'C')
         self.ln(10)
 
-def generate_pdf_report(cust_name, metrics, financials, nodes, edition, currency_symbol, mig_details, node_specs, horizon, acm_status):
+def generate_pdf_report(cust_name, financials, sym, horizon):
     pdf = ROIPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, f"Executive Summary for {cust_name}", ln=True)
+    pdf.cell(0, 10, f"Executive Summary: {cust_name}", ln=True)
     pdf.ln(5)
-
-    # Inventory & Architecture
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "1. Capacity & Forecasting", ln=True)
     pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"- Projection Horizon: {horizon} Years | Annual Workload Growth: {metrics['growth']}%", ln=True)
-    pdf.cell(0, 10, f"- Initial VMs: {metrics['vms']} | Edition: {edition} (ACM: {acm_status})", ln=True)
-    pdf.cell(0, 10, f"- Worker Nodes: {nodes} x ({node_specs['cores']} Cores / {node_specs['ram']}GB RAM)", ln=True)
-
-    # Financials
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, f"2. Financials ({currency_symbol})", ln=True)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"- {horizon}-Year Net Savings: {currency_symbol}{financials['savings']:,.0f}", ln=True)
-    pdf.cell(0, 10, f"- Total Migration Labor Cost: {currency_symbol}{financials['mig_cost']:,.0f}", ln=True)
-
+    pdf.cell(0, 10, f"Projection Horizon: {horizon} Years", ln=True)
+    pdf.cell(0, 10, f"Total Net Savings: {sym}{financials['savings']:,.0f}", ln=True)
     return bytes(pdf.output())
 
 # --- DATA PROCESSING ---
@@ -63,7 +47,6 @@ def process_rvtools(file):
             'OS': next((c for c in df.columns if 'os according to' in c.lower() or c.lower() == 'os'), None),
             'Disk': next((c for c in df.columns if ('capacity' in c.lower() or 'mib' in c.lower()) and 'disk' in c.lower()), None)
         }
-        if None in mapping.values(): return None
         df_clean = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS'], mapping['Disk']]].copy()
         df_clean.columns = ['VM', 'CPUs', 'Memory', 'OS', 'Disk_MiB']
         for col in ['CPUs', 'Memory', 'Disk_MiB']:
@@ -88,39 +71,44 @@ with st.sidebar:
     sub_inflation = st.slider("Annual Subscription Inflation (%)", 0, 15, 10)
 
     st.divider()
-    st.header("⚙️ 3. Sizing & Infrastructure")
-    node_profile = st.selectbox("Node Profile", ["Standard (16c/64g)", "Large (32c/128g)", "Extra Large (64c/256g)", "Custom Spec"])
+    st.header("⚙️ 3. Node Sizing & Overhead")
+    node_profile = st.selectbox("Worker Node Profile",
+                                ["Standard (16c/64g)", "Large (32c/128g)", "Extra Large (64c/256g)", "Custom Spec"])
+
     if node_profile == "Custom Spec":
-        n_cores = st.number_input("Cores", value=32)
-        n_ram = st.number_input("RAM (GB)", value=128)
+        n_cores = st.number_input("Node Physical Cores", value=32)
+        n_ram = st.number_input("Node RAM (GB)", value=128)
     else:
         n_cores, n_ram = (16, 64) if "Standard" in node_profile else (32, 128) if "Large" in node_profile else (64, 256)
 
     node_overhead = st.slider("System Overhead %", 0, 30, 10)
-    cpu_ratio = st.slider("vCPU:Core Ratio", 1.0, 6.0, 3.0)
+    cpu_ratio = st.slider("vCPU:Core Consolidation Ratio", 1.0, 6.0, 3.0)
 
     st.divider()
     st.header("💰 4. VMware & Storage Costing")
     vmw_model = st.selectbox("VMware Model", ["VCF (Subscription)", "VVF (Subscription)", "Legacy ELA"])
-    vmw_core_price = st.number_input(f"Annual {vmw_model} Price / Core ({sym})", value=350)
+    vmw_core_price = st.number_input(f"Annual VMware Core Price ({sym})", value=350)
     stg_price_tb = st.number_input(f"Annual Storage Price / TB ({sym})", value=150)
 
     st.divider()
     st.header("🛠️ 5. Migration Complexity")
     with st.expander("T-Shirt Sizing Labor"):
-        pct_easy = st.slider("% Easy", 0, 100, 70)
-        pct_med = st.slider("% Medium", 0, 100 - pct_easy, 20)
+        pct_easy = st.slider("% Easy (Lift & Shift)", 0, 100, 70)
+        pct_med = st.slider("% Medium (Reconfig)", 0, 100 - pct_easy, 20)
         pct_hard = 100 - (pct_easy + pct_med)
-        hrs_easy, hrs_med, hrs_hard = 4, 16, 60
-        fte_rate = st.number_input(f"Consulting Rate ({sym})", value=120)
+        st.info(f"Hard/Complex Mix: {pct_hard}%")
+        hrs_easy = st.number_input("Hrs per Easy VM", value=4)
+        hrs_med = st.number_input("Hrs per Medium VM", value=16)
+        hrs_hard = st.number_input("Hrs per Hard VM", value=60)
+        fte_rate = st.number_input(f"Consulting Hourly Rate ({sym})", value=120)
 
     st.divider()
     st.header("📦 6. OpenShift Pricing")
-    with st.expander("Price List Details"):
-        price_ove = st.number_input(f"OVE (Essentials) ({sym})", value=1500)
-        price_oke = st.number_input(f"OKE (Engine) ({sym})", value=2200)
-        price_ocp = st.number_input(f"OCP (Platform) ({sym})", value=3200)
-        price_opp = st.number_input(f"OPP (Plus) ({sym})", value=4800)
+    with st.expander("Subscription List Prices"):
+        price_ove = st.number_input(f"OVE ({sym})", value=1500)
+        price_oke = st.number_input(f"OKE ({sym})", value=2200)
+        price_ocp = st.number_input(f"OCP ({sym})", value=3200)
+        price_opp = st.number_input(f"OPP ({sym})", value=4800)
         price_acm_virt = st.number_input(f"ACM for Virt ({sym})", value=600)
         price_acm_k8s = st.number_input(f"ACM for K8s ({sym})", value=900)
 
@@ -134,7 +122,7 @@ with st.sidebar:
         include_acm = st.checkbox("Add ACM for Kubernetes?")
     elif "OPP" in target_edition:
         include_acm = True
-        st.info("ACM included in Plus.")
+        st.info("ACM Included in OPP.")
 
     rhel_value = st.number_input(f"RHEL Guest Value ({sym})", value=800)
 
@@ -145,9 +133,9 @@ if uploaded_file:
         cust_name = uploaded_file.name.split('.')[0]
         vms_base, cpus_base, ram_sum_base, storage_base = len(data), data['CPUs'].sum(), data['Memory'].sum(), data['Disk_TB'].sum()
 
-        # Efficiencies
-        eff_cores_node = n_cores * (1 - node_overhead/100)
-        eff_ram_node = n_ram * (1 - node_overhead/100)
+        # Sizing Logic
+        eff_cores = n_cores * (1 - node_overhead/100)
+        eff_ram = n_ram * (1 - node_overhead/100)
         rhel_savings_base = len(data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]) * rhel_value
 
         # Pricing Map
@@ -158,31 +146,25 @@ if uploaded_file:
             "OPP (Plus)": {"base": price_opp, "acm": 0}
         }
 
-        # CALCULATE MIGRATION LABOR (ONE-TIME)
-        easy_count = int(vms_base * (pct_easy / 100))
-        med_count = int(vms_base * (pct_med / 100))
-        hard_count = vms_base - (easy_count + med_count)
-        total_mig_hrs = (easy_count * hrs_easy) + (med_count * hrs_med) + (hard_count * hrs_hard)
-        total_mig_cost = total_mig_hrs * fte_rate
+        # One-time Migration Cost (Complexity Based)
+        easy_c, med_c = int(vms_base * (pct_easy/100)), int(vms_base * (pct_med/100))
+        hard_c = vms_base - (easy_c + med_c)
+        total_mig_cost = ((easy_c * hrs_easy) + (med_c * hrs_med) + (hard_c * hrs_hard)) * fte_rate
 
         # 7-YEAR COMPOUND FORECASTING
-        vmw_yearly_costs, ocp_yearly_costs, breakdown_data = [], [], []
-        cum_ocp, cum_vmw = total_mig_cost, 0
+        vmw_cum_list, ocp_cum_list, breakdown_data = [], [], []
+        cum_vmw, cum_ocp = 0, total_mig_cost
 
         for yr in range(1, horizon + 1):
             growth_f = (1 + workload_growth/100)**(yr-1)
             inf_f = (1 + sub_inflation/100)**(yr-1)
 
-            # Growth metrics
             vms_yr, cpus_yr = vms_base * growth_f, cpus_base * growth_f
             ram_yr, stg_yr = (ram_sum_base / 1024) * growth_f, storage_base * growth_f
 
-            # Recalculate Nodes
-            nodes_yr = int(max((cpus_yr/cpu_ratio)/eff_cores_node, ram_yr/eff_ram_node)) + 1
+            nodes_yr = int(max((cpus_yr/cpu_ratio)/eff_cores, ram_yr/eff_ram)) + 1
 
-            # Yearly Financials
-            vmw_yr_lic = max(cpus_yr/cpu_ratio, vms_yr * 2) * vmw_core_price
-            vmw_yr_total = vmw_yr_lic + (stg_yr * stg_price_tb * 1.2)
+            vmw_yr_total = (max(cpus_yr/cpu_ratio, vms_yr * 2) * vmw_core_price) + (stg_yr * stg_price_tb * 1.2)
 
             sub_price_yr = (pricing_map[target_edition]["base"] + (pricing_map[target_edition]["acm"] if include_acm else 0)) * inf_f
             auto_gain_yr = (fte_rate * 12 * 80) * (0.9 if include_acm else 0.4)
@@ -190,38 +172,37 @@ if uploaded_file:
 
             cum_vmw += vmw_yr_total
             cum_ocp += ocp_yr_total
-            vmw_yearly_costs.append(cum_vmw)
-            ocp_yearly_costs.append(cum_ocp)
+            vmw_cum_list.append(cum_vmw)
+            ocp_cum_list.append(cum_ocp)
 
             breakdown_data.append({
-                "Year": f"Year {yr}", "VMs": int(vms_yr), "Nodes": nodes_yr,
-                "VMware Cost": f"{sym}{vmw_yr_total:,.0f}", "OpenShift Cost": f"{sym}{ocp_yr_total:,.0f}",
-                "Annual Savings": f"{sym}{(vmw_yr_total - ocp_yr_total):,.0f}"
+                "Year": f"Year {yr}",
+                "Annual VMware": f"{sym}{vmw_yr_total:,.0f}",
+                "Annual OpenShift": f"{sym}{ocp_yr_total:,.0f}",
+                "Cumulative Savings": f"{sym}{(cum_vmw - cum_ocp):,.0f}"
             })
 
         # --- RENDER ---
-        st.header(f"💼 Business Case Analysis: {cust_name}")
-        st.subheader("Summary Metrics")
+        st.header(f"💼 Business Case: {cust_name}")
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Current Storage", f"{storage_base:.1f} TB")
-        m2.metric("Year 1 Nodes", breakdown_data[0]['Nodes'])
-        m3.metric("Migration Labor", f"{sym}{total_mig_cost:,.0f}")
-        m4.metric(f"{horizon}-Year Net Savings", f"{sym}{(cum_vmw - cum_ocp):,.0f}")
+        m1.metric("Upfront Migration Cost", f"{sym}{total_mig_cost:,.0f}")
+        m2.metric(f"Year 1 Nodes", breakdown_data[0]['Annual OpenShift'].split(sym)[0]) # Logic Check
+        m2.metric(f"Year 1 Nodes", int(max((cpus_base/cpu_ratio)/eff_cores, (ram_sum_base/1024)/eff_ram)) + 1)
+        m3.metric(f"{horizon}-Year Total Savings", f"{sym}{(cum_vmw - cum_ocp):,.0f}")
+        m4.metric("Avg Annual Workload Growth", f"{workload_growth}%")
 
         st.divider()
-        st.subheader("Yearly Breakdown Table")
+        st.subheader("Yearly Financial Breakdown")
         st.table(pd.DataFrame(breakdown_data))
 
         st.divider()
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=list(range(1, horizon + 1)), y=vmw_yearly_costs, name="VMware Baseline", line=dict(color='#6A6E73', dash='dash')))
-        fig.add_trace(go.Scatter(x=list(range(1, horizon + 1)), y=ocp_yearly_costs, name=f"Target: {target_edition}", line=dict(color='#EE0000', width=4)))
-        fig.update_layout(title=f"Cumulative {horizon}-Year TCO Projection", yaxis_title=f"Total Spend {sym}")
+        fig.add_trace(go.Scatter(x=list(range(1, horizon + 1)), y=vmw_cum_list, name="Cumulative VMware Spend", line=dict(color='#6A6E73', dash='dash')))
+        fig.add_trace(go.Scatter(x=list(range(1, horizon + 1)), y=ocp_cum_list, name="Cumulative OpenShift Spend", line=dict(color='#EE0000', width=4)))
+        fig.update_layout(title=f"Cumulative {horizon}-Year TCO Projection", xaxis_title="Year", yaxis_title=f"Total Spend ({sym})")
         st.plotly_chart(fig, use_container_width=True)
 
-        # PDF Export
-        metrics_p = {'vms': vms_base, 'cpus': int(cpus_base), 'storage_tb': storage_base, 'ratio': cpu_ratio, 'growth': workload_growth}
-        finance_p = {'savings': cum_vmw - cum_ocp, 'mig_cost': total_mig_cost}
-        node_specs = {'cores': n_cores, 'ram': n_ram}
-        pdf_bytes = generate_pdf_report(cust_name, metrics_p, finance_p, breakdown_data[0]['Nodes'], target_edition, sym, {}, node_specs, horizon, "Yes" if include_acm else "No")
+        pdf_bytes = generate_pdf_report(cust_name, {'savings': cum_vmw - cum_ocp}, sym, horizon)
         st.download_button(f"📄 Download {horizon}-Year Proposal", data=pdf_bytes, file_name=f"V2O_{cust_name}.pdf")
+else:
+    st.info("👋 Welcome. Please upload an RVTools `vInfo` CSV in the sidebar.")
