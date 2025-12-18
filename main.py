@@ -74,5 +74,56 @@ if uploaded_file:
         savings = num_rhel * 800
         st.success(f"Potential Annual RHEL License Saving: **${savings:,}**")
 
+st.header("🎯 Target OpenShift Sizing")
+
+# 1. Sidebar Controls for Sizing
+with st.sidebar:
+    st.header("2. Sizing Assumptions")
+    cpu_ratio = st.slider("vCPU Consolidation Ratio", 1.0, 6.0, 3.0, help="How many VM vCPUs can fit on 1 Physical Core?")
+    node_type = st.selectbox("Worker Node Instance Size",
+                             ["Standard (16 vCPU | 64GB RAM)",
+                              "Large (32 vCPU | 128GB RAM)",
+                              "Extra Large (64 vCPU | 256GB RAM)"])
+
+# Define node capacities based on selection
+if "Standard" in node_type:
+    node_cores, node_ram = 16, 64
+elif "Large" in node_type:
+    node_cores, node_ram = 32, 128
+else:
+    node_cores, node_ram = 64, 256
+
+# 2. Calculation Logic
+# We calculate required cores based on the consolidation ratio
+required_cores = total_cpus / cpu_ratio
+# We assume RAM is 1:1 (no oversubscription for memory is safer)
+required_ram = total_ram_gb
+
+# Calculate nodes needed based on CPU vs RAM (whichever is the bottleneck)
+nodes_by_cpu = required_cores / node_cores
+nodes_by_ram = required_ram / node_ram
+base_nodes = max(nodes_by_cpu, nodes_by_ram)
+
+# Add N+1 for High Availability
+final_worker_nodes = int(base_nodes) + 1
+
+# 3. Display Sizing Results
+col1, col2, col3 = st.columns(3)
+col1.metric("Effective Cores Needed", f"{required_cores:.1f}")
+col2.metric("Worker Nodes (N+1)", final_worker_nodes)
+col3.metric("Total RAM Capacity", f"{final_worker_nodes * node_ram} GB")
+
+st.info(f"💡 **Recommendation:** Deploy **{final_worker_nodes}** worker nodes + **3** control plane (master) nodes.")
+
+# 4. OpenShift Edition Mapping
+st.header("📦 OpenShift Edition Comparison")
+edition_data = {
+    "Edition": ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"],
+    "Best For": ["VM Migration", "Basic Containers", "Full DevOps Stack", "Multi-Cluster/Security"],
+    "Includes ACM?": ["No", "No", "No", "✅ Yes"],
+    "Relative Cost": ["$", "$$", "$$$", "$$$$"]
+}
+
+st.table(edition_data)
         with st.expander("View Cleaned Data"):
             st.dataframe(data)
