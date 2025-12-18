@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "07 - Containerization & OpenShift.md",
+                "file": "08 - Testing and Sample Data.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "07 - Containerization & OpenShift"
+              "title": "08 - Testing and Sample Data"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "07 - Containerization & OpenShift.md",
+                "file": "08 - Testing and Sample Data.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 07 - Containerization & OpenShift"
+              "title": "Backlinks for 08 - Testing and Sample Data"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "07 - Containerization & OpenShift.md",
+                "file": "08 - Testing and Sample Data.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 07 - Containerization & OpenShift"
+              "title": "Outgoing links from 08 - Testing and Sample Data"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "07 - Containerization & OpenShift.md",
+                "file": "08 - Testing and Sample Data.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 07 - Containerization & OpenShift"
+              "title": "Outline of 08 - Testing and Sample Data"
             }
           }
         ]
@@ -185,8 +185,9 @@
   },
   "active": "c8c255fb82cadb31",
   "lastOpenFiles": [
-    "Troubleshooting & Common Errors.md",
     "07 - Containerization & OpenShift.md",
+    "08 - Testing and Sample Data.md",
+    "Troubleshooting & Common Errors.md",
     "00 - Presentation Guide -  Using the V2O Navigator.md",
     "05 - People and Process Transformation.md",
     "06 - The 5-Year TCO Analysis.md",

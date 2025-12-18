@@ -1,0 +1,101 @@
+VM,Powerstate,CPUs,Memory,OS according to the configuration file,DNS Name,Connection state,Guest state,Datacenter,Cluster
+VM-STAGING-1000,poweredOn,8,"16,384",Oracle Linux 7 (64-bit),vm-staging-1000.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1001,poweredOn,32,"65,536",Microsoft Windows Server 2019 (64-bit),vm-app-1001.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1002,poweredOn,2,"2,048",Oracle Linux 7 (64-bit),vm-prod-1002.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1003,poweredOn,4,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-db-1003.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1004,poweredOn,16,"32,768",Microsoft Windows Server 2019 (64-bit),vm-staging-1004.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1005,poweredOn,4,"4,096",Oracle Linux 7 (64-bit),vm-prod-1005.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1006,poweredOn,2,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-prod-1006.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1007,poweredOn,32,"65,536",CentOS 7 (64-bit),vm-staging-1007.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1008,poweredOn,32,"8,192",Red Hat Enterprise Linux 8 (64-bit),vm-staging-1008.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1009,poweredOn,8,"8,192",CentOS 7 (64-bit),vm-db-1009.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1010,poweredOn,16,"32,768",Microsoft Windows Server 2019 (64-bit),vm-app-1010.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1011,poweredOn,2,"32,768",Red Hat Enterprise Linux 7 (64-bit),vm-prod-1011.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1012,poweredOn,32,"2,048",Red Hat Enterprise Linux 7 (64-bit),vm-dev-1012.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1013,poweredOn,32,"65,536",CentOS 7 (64-bit),vm-staging-1013.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1014,poweredOn,2,"32,768",Oracle Linux 7 (64-bit),vm-dev-1014.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1015,poweredOn,2,"2,048",CentOS 7 (64-bit),vm-prod-1015.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1016,poweredOn,32,"8,192",Microsoft Windows Server 2019 (64-bit),vm-dev-1016.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1017,poweredOn,32,"32,768",Oracle Linux 7 (64-bit),vm-staging-1017.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1018,poweredOn,16,"4,096",Microsoft Windows Server 2022 (64-bit),vm-staging-1018.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1019,poweredOn,2,"4,096",Ubuntu Linux (64-bit),vm-prod-1019.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1020,poweredOn,16,"32,768",Microsoft Windows Server 2019 (64-bit),vm-prod-1020.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1021,poweredOn,16,"4,096",Microsoft Windows Server 2019 (64-bit),vm-app-1021.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1022,poweredOn,4,"32,768",Microsoft Windows Server 2019 (64-bit),vm-staging-1022.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1023,poweredOn,32,"16,384",Microsoft Windows Server 2022 (64-bit),vm-app-1023.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1024,poweredOn,4,"16,384",Red Hat Enterprise Linux 8 (64-bit),vm-dev-1024.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1025,poweredOn,16,"4,096",Microsoft Windows Server 2019 (64-bit),vm-dev-1025.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1026,poweredOn,16,"4,096",Microsoft Windows Server 2019 (64-bit),vm-db-1026.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1027,poweredOn,16,"8,192",Microsoft Windows Server 2019 (64-bit),vm-staging-1027.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1028,poweredOn,8,"8,192",CentOS 7 (64-bit),vm-app-1028.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1029,poweredOn,8,"4,096",Red Hat Enterprise Linux 7 (64-bit),vm-prod-1029.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1030,poweredOn,8,"2,048",Microsoft Windows Server 2019 (64-bit),vm-db-1030.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1031,poweredOn,2,"65,536",CentOS 7 (64-bit),vm-prod-1031.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1032,poweredOn,32,"32,768",Red Hat Enterprise Linux 7 (64-bit),vm-app-1032.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1033,poweredOn,4,"16,384",CentOS 7 (64-bit),vm-db-1033.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1034,poweredOn,4,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-dev-1034.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1035,poweredOn,16,"32,768",Red Hat Enterprise Linux 8 (64-bit),vm-app-1035.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1036,poweredOn,8,"2,048",Oracle Linux 7 (64-bit),vm-prod-1036.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1037,poweredOn,4,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-app-1037.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1038,poweredOn,16,"8,192",Ubuntu Linux (64-bit),vm-app-1038.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1039,poweredOn,16,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-staging-1039.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1040,poweredOn,32,"2,048",Microsoft Windows Server 2019 (64-bit),vm-staging-1040.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1041,poweredOn,8,"32,768",Oracle Linux 7 (64-bit),vm-db-1041.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1042,poweredOn,32,"8,192",Microsoft Windows Server 2022 (64-bit),vm-prod-1042.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1043,poweredOn,2,"8,192",CentOS 7 (64-bit),vm-prod-1043.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1044,poweredOn,4,"32,768",Ubuntu Linux (64-bit),vm-db-1044.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1045,poweredOn,4,"2,048",CentOS 7 (64-bit),vm-app-1045.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1046,poweredOn,2,"16,384",Oracle Linux 7 (64-bit),vm-prod-1046.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1047,poweredOn,32,"32,768",Red Hat Enterprise Linux 8 (64-bit),vm-app-1047.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1048,poweredOn,8,"16,384",CentOS 7 (64-bit),vm-dev-1048.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1049,poweredOn,16,"65,536",Red Hat Enterprise Linux 7 (64-bit),vm-dev-1049.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1050,poweredOn,4,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-dev-1050.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1051,poweredOn,8,"32,768",Red Hat Enterprise Linux 8 (64-bit),vm-app-1051.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1052,poweredOn,16,"16,384",Microsoft Windows Server 2019 (64-bit),vm-db-1052.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1053,poweredOn,2,"8,192",Oracle Linux 7 (64-bit),vm-staging-1053.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1054,poweredOn,32,"65,536",Oracle Linux 7 (64-bit),vm-staging-1054.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1055,poweredOn,32,"16,384",Oracle Linux 7 (64-bit),vm-db-1055.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1056,poweredOn,8,"16,384",Oracle Linux 7 (64-bit),vm-prod-1056.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1057,poweredOn,8,"4,096",Oracle Linux 7 (64-bit),vm-staging-1057.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1058,poweredOn,2,"65,536",Microsoft Windows Server 2019 (64-bit),vm-staging-1058.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1059,poweredOn,8,"65,536",Red Hat Enterprise Linux 7 (64-bit),vm-db-1059.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1060,poweredOn,8,"32,768",Microsoft Windows Server 2019 (64-bit),vm-db-1060.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1061,poweredOn,16,"2,048",Ubuntu Linux (64-bit),vm-staging-1061.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1062,poweredOn,8,"2,048",CentOS 7 (64-bit),vm-dev-1062.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1063,poweredOn,4,"2,048",Red Hat Enterprise Linux 7 (64-bit),vm-staging-1063.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1064,poweredOn,32,"4,096",Red Hat Enterprise Linux 7 (64-bit),vm-prod-1064.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1065,poweredOn,16,"2,048",Oracle Linux 7 (64-bit),vm-staging-1065.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1066,poweredOn,16,"8,192",Oracle Linux 7 (64-bit),vm-db-1066.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1067,poweredOn,16,"4,096",Ubuntu Linux (64-bit),vm-dev-1067.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1068,poweredOn,8,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-prod-1068.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1069,poweredOn,32,"2,048",Ubuntu Linux (64-bit),vm-prod-1069.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1070,poweredOn,16,"32,768",Ubuntu Linux (64-bit),vm-app-1070.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1071,poweredOn,4,"32,768",Microsoft Windows Server 2019 (64-bit),vm-staging-1071.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1072,poweredOn,2,"16,384",Red Hat Enterprise Linux 7 (64-bit),vm-app-1072.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1073,poweredOn,8,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-dev-1073.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1074,poweredOn,2,"4,096",Oracle Linux 7 (64-bit),vm-dev-1074.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1075,poweredOn,32,"65,536",Red Hat Enterprise Linux 7 (64-bit),vm-db-1075.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1076,poweredOn,4,"4,096",Microsoft Windows Server 2019 (64-bit),vm-db-1076.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1077,poweredOn,4,"65,536",Microsoft Windows Server 2022 (64-bit),vm-db-1077.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1078,poweredOn,8,"16,384",Oracle Linux 7 (64-bit),vm-dev-1078.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1079,poweredOn,32,"4,096",Microsoft Windows Server 2019 (64-bit),vm-prod-1079.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-APP-1080,poweredOn,8,"32,768",CentOS 7 (64-bit),vm-app-1080.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1081,poweredOn,32,"2,048",Microsoft Windows Server 2022 (64-bit),vm-dev-1081.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1082,poweredOn,16,"2,048",Red Hat Enterprise Linux 7 (64-bit),vm-prod-1082.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1083,poweredOn,32,"32,768",Red Hat Enterprise Linux 7 (64-bit),vm-staging-1083.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1084,poweredOn,8,"16,384",Oracle Linux 7 (64-bit),vm-prod-1084.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1085,poweredOn,4,"16,384",Microsoft Windows Server 2022 (64-bit),vm-dev-1085.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1086,poweredOn,2,"16,384",CentOS 7 (64-bit),vm-dev-1086.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1087,poweredOn,8,"32,768",Oracle Linux 7 (64-bit),vm-prod-1087.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1088,poweredOn,4,"16,384",Oracle Linux 7 (64-bit),vm-staging-1088.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1089,poweredOn,32,"4,096",Oracle Linux 7 (64-bit),vm-dev-1089.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1090,poweredOn,32,"65,536",CentOS 7 (64-bit),vm-dev-1090.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1091,poweredOn,2,"65,536",Red Hat Enterprise Linux 8 (64-bit),vm-staging-1091.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1092,poweredOn,16,"32,768",Microsoft Windows Server 2019 (64-bit),vm-db-1092.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1093,poweredOn,32,"65,536",Microsoft Windows Server 2019 (64-bit),vm-prod-1093.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1094,poweredOn,4,"16,384",Red Hat Enterprise Linux 7 (64-bit),vm-dev-1094.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1095,poweredOn,4,"65,536",Red Hat Enterprise Linux 7 (64-bit),vm-staging-1095.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DEV-1096,poweredOn,2,"8,192",Red Hat Enterprise Linux 8 (64-bit),vm-dev-1096.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-STAGING-1097,poweredOn,32,"2,048",Microsoft Windows Server 2022 (64-bit),vm-staging-1097.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-PROD-1098,poweredOn,8,"65,536",Microsoft Windows Server 2019 (64-bit),vm-prod-1098.internal.corp,connected,running,Datacenter-01,Cluster-A
+VM-DB-1099,poweredOn,16,"8,192",Red Hat Enterprise Linux 8 (64-bit),vm-db-1099.internal.corp,connected,running,Datacenter-01,Cluster-A
