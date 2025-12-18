@@ -35,3 +35,20 @@ Excel often exports numbers with commas (e.g., `1,024`). Python sees this as a *
 
 ### 3. MB to GB Conversion
 RVTools reports memory in **MiB**. Since OpenShift nodes are usually sized in **GB**, we divide the total by `1024` to provide a metric that is relevant to our platform.
+
+## Capturing the Full Stack
+To move from "Demo" to "Real-World," we now extract the storage footprint in addition to Compute and RAM.
+
+### Key Column: Total disk capacity MiB
+RVTools reports storage in **MiB (Mebibytes)**. To make this relevant for modern storage arrays and cloud pricing, our parser performs the following:
+1. **Cleaning:** Removes commas from the string.
+2. **Conversion:** Divides by `1,048,576` (1024 * 1024) to convert MiB to **Terabytes (TB)**.
+
+## Why TB matters
+Sizing **OpenShift Data Foundation (ODF)** or Partner solutions like **NetApp Trident** requires an accurate TB count to determine the number of disks or licenses needed.
+
+### Updated Logic Check
+- **VM Name:** Identifies the workload.
+- **CPUs/Memory:** Sizes the Compute nodes.
+- **Disk_MiB:** Sizes the Storage layer.
+- **OS:** Calculates the RHEL Dividend.

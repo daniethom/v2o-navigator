@@ -2,120 +2,227 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from fpdf import FPDF
-import base64
+import datetime
 
-# --- INITIAL SETUP ---
-st.set_page_config(page_title="V2O Navigator", layout="wide", page_icon="🚀")
+# --- INITIAL SETUP & THEMING ---
+st.set_page_config(
+    page_title="V2O Navigator | Migration ROI",
+    page_icon="🚀",
+    layout="wide"
+)
 
-# --- PDF GENERATION FUNCTION ---
-def create_pdf(customer, vms, cpus, ram, savings, nodes, edition, total_savings):
-    pdf = FPDF()
+# Custom Red Hat-inspired styling for the metric cards
+st.markdown("""
+    <style>
+    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 10px; border-left: 5px solid #EE0000; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- PDF GENERATION ENGINE ---
+class ROIPDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 15)
+        self.cell(0, 10, 'V2O Navigator: Infrastructure Migration Analysis', 0, 1, 'C')
+        self.ln(10)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()} | Generated on {datetime.date.today()}', 0, 0, 'C')
+
+def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
+    pdf = ROIPDF()
     pdf.add_page()
 
-    # Header
-    pdf.set_font("Arial", "B", 24)
-    pdf.cell(0, 20, "V2O Navigator: Migration Report", ln=True, align="C")
+    # Executive Summary
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, f"Executive Summary for {cust_name}", ln=True)
+    pdf.ln(5)
 
-    # Customer Info
+    pdf.set_font("Arial", "", 12)
+    pdf.multi_cell(0, 10, f"This report outlines the technical and financial impact of migrating from a legacy virtualization estate to an enterprise container platform ({edition}).")
+    pdf.ln(5)
+
+    # Tables for Data
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(95, 10, "Current Inventory Metrics", border=1)
+    pdf.cell(95, 10, "Target Architecture", border=1, ln=True)
+
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(95, 10, f"Total VMs: {metrics['vms']}", border=1)
+    pdf.cell(95, 10, f"Target Nodes: {nodes}", border=1, ln=True)
+    pdf.cell(95, 10, f"Total vCPUs: {metrics['cpus']}", border=1)
+    pdf.cell(95, 10, f"Edition: {edition}", border=1, ln=True)
+    pdf.cell(95, 10, f"Total Storage: {metrics['storage_tb']:.2f} TB", border=1)
+    pdf.cell(95, 10, f"Consolidation Ratio: {metrics['ratio']}:1", border=1, ln=True)
+
+    pdf.ln(10)
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, f"Prepared for: {customer}", ln=True)
-    pdf.ln(5)
-
-    # Summary Table
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "1. Current Infrastructure Summary", ln=True)
+    pdf.cell(0, 10, "Financial Outcomes (5-Year Forecast)", ln=True)
     pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"- Total Virtual Machines: {vms}", ln=True)
-    pdf.cell(0, 10, f"- Total vCPU Count: {cpus}", ln=True)
-    pdf.cell(0, 10, f"- Total RAM: {ram:,.0f} GB", ln=True)
-
-    # Financials
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "2. Financial Impact", ln=True)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"- Estimated Annual Guest OS Savings: ${savings:,.0f}", ln=True)
-    pdf.cell(0, 10, f"- Project 5-Year Net Savings: ${total_savings:,.0f}", ln=True)
-
-    # Architecture
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "3. Proposed Architecture", ln=True)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"- Target Platform Edition: {edition}", ln=True)
-    pdf.cell(0, 10, f"- Recommended Worker Nodes (N+1): {nodes}", ln=True)
-
-    # Disclaimer
-    pdf.ln(20)
-    pdf.set_font("Arial", "I", 8)
-    pdf.multi_cell(0, 5, "Disclaimer: This report is an estimate based on industry averages and provided data. Actual costs and sizing may vary based on final configuration and enterprise agreements.")
+    pdf.cell(0, 10, f"- Projected Net Savings: ${financials['savings']:,.0f}", ln=True)
+    pdf.cell(0, 10, f"- Est. Annual Licensing Reduction: ${financials['licensing_red']:,.0f}", ln=True)
+    pdf.cell(0, 10, f"- Operational Efficiency Gain: {financials['hrs_saved']} hours/month", ln=True)
 
     return pdf.output(dest='S')
 
-# --- REUSE PREVIOUS PARSER & UI LOGIC ---
-# (I am keeping the core logic but adding the download button at the end)
+# --- DATA PROCESSING ---
 
 def process_rvtools(file):
+    """Parses RVTools vInfo, captures Compute and Storage data."""
     try:
         df = pd.read_csv(file)
         df.columns = df.columns.str.strip()
-        mapping = {'VM': 'VM', 'CPUs': 'CPUs', 'Memory': 'Memory', 'OS': 'OS according to the configuration file'}
+
+        # Robust column mapping
+        mapping = {
+            'VM': 'VM',
+            'CPUs': 'CPUs',
+            'Memory': 'Memory',
+            'OS': 'OS according to the configuration file',
+            'Disk': 'Total disk capacity MiB'
+        }
+
+        # Fuzzy search for columns if exact match fails
         for key, expected in mapping.items():
             if expected not in df.columns:
                 found = [col for col in df.columns if key in col]
-                if found: mapping[key] = found[0]
-                else: return None
-        df = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS']]]
-        df.columns = ['VM', 'CPUs', 'Memory', 'OS']
-        for col in ['CPUs', 'Memory']:
-            df[col] = df[col].astype(str).str.replace(',', '').astype(float)
-        return df
-    except: return None
+                mapping[key] = found[0] if found else expected
 
-# --- SIDEBAR & MAIN APP ---
+        # Cleaning and conversion
+        df_clean = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS'], mapping['Disk']]].copy()
+        df_clean.columns = ['VM', 'CPUs', 'Memory', 'OS', 'Disk_MiB']
+
+        for col in ['CPUs', 'Memory', 'Disk_MiB']:
+            df_clean[col] = df_clean[col].astype(str).str.replace(',', '').astype(float)
+
+        # Add a TB column for storage
+        df_clean['Disk_TB'] = df_clean['Disk_MiB'] / 1024 / 1024
+
+        return df_clean
+    except Exception as e:
+        st.error(f"Error parsing RVTools file: {e}")
+        return None
+
+# --- SIDEBAR: ADVANCED COSTING ---
+
 with st.sidebar:
+    st.image("https://www.redhat.com/cms/managed-files/Logo-RedHat-OpenShift-A-Standard-RGB.png", width=200)
     st.title("V2O Navigator")
-    customer_name = st.text_input("Customer Name", "Acme Corp")
+
     uploaded_file = st.file_uploader("Upload RVTools vInfo CSV", type=["csv"])
-    cpu_ratio = st.slider("vCPU Consolidation", 1.0, 6.0, 3.0)
-    node_type = st.selectbox("Node Size", ["Standard (16 vCPU | 64GB RAM)", "Large (32 vCPU | 128GB RAM)"])
-    edition = st.selectbox("Edition", ["OVE", "OKE", "OCP", "OPP"])
-    annual_vmw_cost = st.number_input("Annual VMware Spend ($)", value=100000)
+
+    st.divider()
+    st.header("1. Sizing Assumptions")
+    cpu_ratio = st.slider("Consolidation Ratio (vCPU:Core)", 1.0, 6.0, 3.0)
+    node_size = st.selectbox("Node Instance", ["Standard (16c/64g)", "Large (32c/128g)", "Extra Large (64c/256g)"])
+
+    st.divider()
+    st.header("2. Real-World Costing")
+    vmw_model = st.selectbox("Current Licensing Model", ["VCF (Subscription)", "VVF (Subscription)", "Legacy ELA"])
+    vmw_core_price = st.number_input(f"Annual {vmw_model} Price / Core ($)", value=350 if "VCF" in vmw_model else 200)
+
+    st.divider()
+    st.header("3. Storage & Solution")
+    storage_provider = st.selectbox("Storage Target", ["ODF (Native)", "NetApp Trident", "Portworx", "IBM Ceph"])
+    stg_price_tb = st.number_input(f"Annual {storage_provider} Price / TB ($)", value=150)
+
+    target_edition = st.selectbox("Proposed Edition", ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"])
+
+# --- MAIN APP LOGIC ---
 
 if uploaded_file:
     data = process_rvtools(uploaded_file)
+
     if data is not None:
-        # Calculations
+        cust_name = uploaded_file.name.split('.')[0]
+
+        # A. Current Estate Metrics
         total_vms = len(data)
-        total_cpus = data['CPUs'].sum()
+        total_vcpus = data['CPUs'].sum()
         total_ram_gb = data['Memory'].sum() / 1024
-        num_rhel = len(data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)])
-        rhel_savings = num_rhel * 800
+        total_disk_tb = data['Disk_TB'].sum()
 
-        n_cores, n_ram = (16, 64) if "Standard" in node_type else (32, 128)
-        worker_nodes = int(max((total_cpus/cpu_ratio)/n_cores, total_ram_gb/n_ram)) + 1
-
-        # Financials for TCO
-        ocp_total_5yr = (worker_nodes * 2500 * 5) - (rhel_savings * 5)
-        vmw_total_5yr = annual_vmw_cost * 5
-        net_5yr_savings = vmw_total_5yr - ocp_total_5yr
-
-        # Display Metrics
-        st.header(f"Analysis for {customer_name}")
-        c1, c2, c3 = st.columns(3)
+        st.header(f"📊 Infrastructure Summary: {cust_name}")
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("Total VMs", total_vms)
-        c2.metric("Worker Nodes", worker_nodes)
-        c3.metric("5-Year Savings", f"${net_5yr_savings:,.0f}")
+        c2.metric("Total vCPUs", int(total_vcpus))
+        c3.metric("Total RAM (GB)", f"{total_ram_gb:,.0f}")
+        c4.metric("Total Storage (TB)", f"{total_disk_tb:,.1f}")
 
-        # --- PDF DOWNLOAD BUTTON ---
+        # B. Financial Baseline (VMware VCF/VVF logic)
+        # Assuming 16-core minimum per host for VCF/VVF pricing models
+        est_physical_cores = max(total_vcpus / cpu_ratio, total_vms * 2)
+        annual_vmw_licensing = est_physical_cores * vmw_core_price
+        annual_vmw_storage = total_disk_tb * (stg_price_tb * 1.2) # Assuming legacy storage is 20% more expensive
+        vmw_annual_tco = annual_vmw_licensing + annual_vmw_storage
+
+        # C. Target Architecture Sizing
+        n_cores, n_ram = (16, 64) if "Standard" in node_size else (32, 128) if "Large" in node_size else (64, 256)
+        req_nodes = int(max((total_vcpus/cpu_ratio)/n_cores, total_ram_gb/n_ram)) + 1
+
+        # D. RHEL Savings
+        rhel_vms = data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]
+        num_rhel = len(rhel_vms)
+        rhel_annual_savings = num_rhel * 800
+
+        # E. Multi-Edition "What-If" Analysis
         st.divider()
-        pdf_data = create_pdf(customer_name, total_vms, total_cpus, total_ram_gb, rhel_savings, worker_nodes, edition, net_5yr_savings)
+        st.header("⚖️ Platform Edition Comparison")
+
+        comparison_list = []
+        for ed in ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"]:
+            sub_price = 1500 if "OVE" in ed else 2200 if "OKE" in ed else 3200 if "OCP" in ed else 4800
+            annual_sub = req_nodes * sub_price
+
+            # Efficiency logic: OPP (Platform Plus) with ACM saves much more time
+            efficiency_gain = 0.9 if "Plus" in ed else 0.4
+            hrly_savings = (80 * 12 * 80) * efficiency_gain # Placeholder for operational hrs saved
+
+            net_impact = annual_sub - rhel_annual_savings - hrly_savings
+
+            comparison_list.append({
+                "Edition": ed,
+                "Subscription": f"${annual_sub:,.0f}",
+                "RHEL Dividend": f"-${rhel_annual_savings:,.0f}",
+                "Net Annual Impact": f"${int(net_impact):,}"
+            })
+
+        st.table(pd.DataFrame(comparison_list))
+
+        # F. 5-Year Cumulative TCO Chart
+        st.divider()
+        st.header("📈 5-Year Cumulative TCO Projection")
+
+        # Selected Edition Pricing
+        selected_sub_annual = req_nodes * (4800 if "Plus" in target_edition else 3200)
+        selected_stg_annual = total_disk_tb * stg_price_tb
+
+        vmw_5yr = [vmw_annual_tco * i for i in range(1, 6)]
+        ocp_5yr = []
+        current_ocp = (total_vms * 8 * 80) # Migration cost
+        for i in range(1, 6):
+            current_ocp += (selected_sub_annual + selected_stg_annual - rhel_annual_savings)
+            ocp_5yr.append(current_ocp)
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=vmw_5yr, name="Current VMware (VCF/VVF)", line=dict(color='#6A6E73', width=2, dash='dash')))
+        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=ocp_5yr, name=f"Target {target_edition}", line=dict(color='#EE0000', width=4)))
+        fig.update_layout(xaxis_title="Year", yaxis_title="Total Spend ($)")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # G. Export
+        st.divider()
+        metrics_dict = {'vms': total_vms, 'cpus': int(total_vcpus), 'storage_tb': total_disk_tb, 'ratio': cpu_ratio}
+        finance_dict = {'savings': vmw_5yr[-1] - ocp_5yr[-1], 'licensing_red': annual_vmw_licensing - selected_sub_annual, 'hrs_saved': 80}
+
+        pdf_bytes = generate_pdf_report(cust_name, metrics_dict, finance_dict, req_nodes, target_edition)
 
         st.download_button(
-            label="📄 Download Executive TCO Report (PDF)",
-            data=pdf_data,
-            file_name=f"V2O_Report_{customer_name}.pdf",
+            label="📄 Download Detailed Executive Report",
+            data=pdf_bytes,
+            file_name=f"V2O_Navigator_{cust_name}.pdf",
             mime="application/pdf"
         )
 else:
-    st.info("Please upload data to begin.")
+    st.info("👋 **Welcome to V2O Navigator.** Please upload your RVTools `vInfo` CSV in the sidebar to begin.")
