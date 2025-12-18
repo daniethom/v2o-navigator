@@ -43,7 +43,7 @@ def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
     pdf.multi_cell(0, 10, f"This report outlines the technical and financial impact of migrating from a legacy virtualization estate to an enterprise container platform ({edition}).")
     pdf.ln(5)
 
-    # Data Table
+    # Summary Table
     pdf.set_font("Arial", "B", 12)
     pdf.cell(95, 10, "Current Inventory Metrics", border=1)
     pdf.cell(95, 10, "Target Architecture", border=1, ln=True)
@@ -100,7 +100,7 @@ def process_rvtools(file):
         st.error(f"⚠️ Error processing CSV: {e}")
         return None
 
-# --- SIDEBAR: INPUTS ---
+# --- SIDEBAR: INPUTS & PRICING ---
 
 with st.sidebar:
     st.image("https://www.redhat.com/cms/managed-files/Logo-RedHat-OpenShift-A-Standard-RGB.png", width=200)
@@ -114,12 +114,25 @@ with st.sidebar:
     node_size = st.selectbox("Node Instance", ["Standard (16c/64g)", "Large (32c/128g)", "Extra Large (64c/256g)"])
 
     st.divider()
-    st.header("2. Real-World Costing")
+    st.header("2. VMware & Storage Costing")
     vmw_model = st.selectbox("VMware Model", ["VCF (Subscription)", "VVF (Subscription)", "Legacy ELA"])
     vmw_core_price = st.number_input(f"Annual {vmw_model} Price / Core ($)", value=350)
     stg_price_tb = st.number_input("Annual Storage Price / TB ($)", value=150)
 
+    st.divider()
+    st.header("3. OpenShift Pricing")
+    with st.expander("Adjust Edition Pricing"):
+        price_ove = st.number_input("OVE (Essentials) Price", value=1500)
+        price_oke = st.number_input("OKE (Engine) Price", value=2200)
+        price_ocp = st.number_input("OCP (Platform) Price", value=3200)
+        price_opp = st.number_input("OPP (Plus) Price", value=4800)
+
     target_edition = st.selectbox("Proposed Edition", ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"])
+
+    st.divider()
+    st.header("4. Labor & Efficiency")
+    fte_rate = st.number_input("FTE Hourly Rate ($)", value=80)
+    rhel_list_price = st.number_input("RHEL Guest Value ($)", value=800)
 
 # --- MAIN APP LOGIC ---
 
@@ -151,17 +164,24 @@ if uploaded_file:
         n_cores, n_ram = (16, 64) if "Standard" in node_size else (32, 128) if "Large" in node_size else (64, 256)
         req_nodes = int(max((total_vcpus/cpu_ratio)/n_cores, total_ram_gb/n_ram)) + 1
 
-        # D. Multi-Edition Analysis
+        # D. RHEL Savings & Multi-Edition Comparison
         st.divider()
         st.header("⚖️ Platform Edition Comparison")
-        rhel_savings = len(data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]) * 800
+        rhel_savings = len(data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]) * rhel_list_price
 
         comparison = []
-        for ed in ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"]:
-            sub_price = 1500 if "OVE" in ed else 2200 if "OKE" in ed else 3200 if "OCP" in ed else 4800
+        pricing_map = {
+            "OVE (Essentials)": price_ove,
+            "OKE (Engine)": price_oke,
+            "OCP (Platform)": price_ocp,
+            "OPP (Plus)": price_opp
+        }
+
+        for ed, sub_price in pricing_map.items():
             annual_sub = req_nodes * sub_price
+            # Operational efficiency logic
             efficiency_gain = 0.9 if "Plus" in ed else 0.4
-            hrly_savings = (80 * 12 * 80) * efficiency_gain
+            hrly_savings = (fte_rate * 12 * 80) * efficiency_gain
             net_impact = annual_sub - rhel_savings - hrly_savings
 
             comparison.append({
@@ -176,14 +196,12 @@ if uploaded_file:
         st.divider()
         st.header("📈 5-Year Cumulative TCO Projection")
 
-        # Use target edition price from comparison logic
-        target_sub_price = 4800 if "Plus" in target_edition else 3200 if "Platform" in target_edition else 2200 if "Engine" in target_edition else 1500
-        selected_sub_annual = req_nodes * target_sub_price
+        selected_sub_annual = req_nodes * pricing_map[target_edition]
         selected_stg_annual = total_disk_tb * stg_price_tb
 
         vmw_5yr = [vmw_annual_tco * i for i in range(1, 6)]
         ocp_5yr = []
-        current_ocp = (total_vms * 8 * 80) # One-time migration effort
+        current_ocp = (total_vms * 8 * fte_rate) # One-time migration effort
 
         for i in range(1, 6):
             current_ocp += (selected_sub_annual + selected_stg_annual - rhel_savings)
@@ -197,10 +215,10 @@ if uploaded_file:
 
         # F. Export to PDF
         st.divider()
-        metrics_dict = {'vms': total_vms, 'cpus': int(total_vcpus), 'storage_tb': total_disk_tb, 'ratio': cpu_ratio}
-        finance_dict = {'savings': vmw_5yr[-1] - ocp_5yr[-1], 'licensing_red': annual_vmw_licensing - selected_sub_annual}
+        m_dict = {'vms': total_vms, 'cpus': int(total_vcpus), 'storage_tb': total_disk_tb, 'ratio': cpu_ratio}
+        f_dict = {'savings': vmw_5yr[-1] - ocp_5yr[-1], 'licensing_red': annual_vmw_licensing - selected_sub_annual}
 
-        pdf_bytes = generate_pdf_report(cust_name, metrics_dict, finance_dict, req_nodes, target_edition)
+        pdf_bytes = generate_pdf_report(cust_name, m_dict, f_dict, req_nodes, target_edition)
 
         st.download_button(
             label="📄 Download Detailed Executive Report",
