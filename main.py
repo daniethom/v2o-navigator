@@ -15,7 +15,7 @@ st.markdown("""
     .main { background-color: #f0f0f0; }
     .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; border-left: 5px solid #EE0000; }
     </style>
-    """, unsafe_allow_none=True)
+    """, unsafe_allow_html=True)
 
 # --- HELPER FUNCTIONS ---
 
