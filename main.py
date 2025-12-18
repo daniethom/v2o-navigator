@@ -30,7 +30,7 @@ class ROIPDF(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()} | Generated on {datetime.date.today()}', 0, 0, 'C')
 
-def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
+def generate_pdf_report(cust_name, metrics, financials, nodes, edition, acm_included):
     pdf = ROIPDF()
     pdf.add_page()
 
@@ -40,7 +40,8 @@ def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
     pdf.ln(5)
 
     pdf.set_font("Arial", "", 12)
-    pdf.multi_cell(0, 10, f"This report outlines the technical and financial impact of migrating from a legacy virtualization estate to an enterprise container platform ({edition}).")
+    acm_text = " (with ACM)" if acm_included else ""
+    pdf.multi_cell(0, 10, f"This report outlines the technical and financial impact of migrating from a legacy virtualization estate to an enterprise container platform: {edition}{acm_text}.")
     pdf.ln(5)
 
     # Summary Table
@@ -54,7 +55,7 @@ def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
     pdf.cell(95, 10, f"Total vCPUs: {metrics['cpus']}", border=1)
     pdf.cell(95, 10, f"Edition: {edition}", border=1, ln=True)
     pdf.cell(95, 10, f"Total Storage: {metrics['storage_tb']:.2f} TB", border=1)
-    pdf.cell(95, 10, f"Consolidation Ratio: {metrics['ratio']}:1", border=1, ln=True)
+    pdf.cell(95, 10, f"ACM Included: {'Yes' if acm_included else 'No'}", border=1, ln=True)
 
     pdf.ln(10)
     pdf.set_font("Arial", "B", 14)
@@ -68,7 +69,6 @@ def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
 # --- RESILIENT DATA PROCESSING ---
 
 def process_rvtools(file):
-    """Parses RVTools vInfo with specific logic for 'Disk Capacity' vs 'Disk Count'."""
     try:
         df = pd.read_csv(file)
         df.columns = [str(c).strip() for c in df.columns]
@@ -78,8 +78,6 @@ def process_rvtools(file):
         mapping['CPUs'] = next((c for c in df.columns if c.lower() in ['cpus', 'vcpu']), None)
         mapping['Memory'] = next((c for c in df.columns if 'memory' in c.lower()), None)
         mapping['OS'] = next((c for c in df.columns if 'os according to' in c.lower() or c.lower() == 'os'), None)
-
-        # Hyper-specific Disk Capacity Search
         mapping['Disk'] = next((c for c in df.columns if ('capacity' in c.lower() or 'mib' in c.lower()) and 'disk' in c.lower()), None)
 
         for key, value in mapping.items():
@@ -120,14 +118,27 @@ with st.sidebar:
     stg_price_tb = st.number_input("Annual Storage Price / TB ($)", value=150)
 
     st.divider()
-    st.header("3. OpenShift Pricing")
+    st.header("3. OpenShift & ACM Pricing")
     with st.expander("Adjust Edition Pricing"):
         price_ove = st.number_input("OVE (Essentials) Price", value=1500)
         price_oke = st.number_input("OKE (Engine) Price", value=2200)
         price_ocp = st.number_input("OCP (Platform) Price", value=3200)
         price_opp = st.number_input("OPP (Plus) Price", value=4800)
+        st.caption("ACM Add-ons")
+        price_acm_virt = st.number_input("ACM for Virtualization (Add-on)", value=600)
+        price_acm_k8s = st.number_input("ACM for Kubernetes (Add-on)", value=900)
 
     target_edition = st.selectbox("Proposed Edition", ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"])
+
+    # ACM Toggles
+    include_acm = False
+    if "OVE" in target_edition:
+        include_acm = st.checkbox("Add ACM for Virtualization?")
+    elif "OKE" in target_edition or "OCP" in target_edition:
+        include_acm = st.checkbox("Add ACM for Kubernetes?")
+    elif "OPP" in target_edition:
+        st.info("ACM is already included in Platform Plus (OPP).")
+        include_acm = True
 
     st.divider()
     st.header("4. Labor & Efficiency")
@@ -166,28 +177,33 @@ if uploaded_file:
 
         # D. RHEL Savings & Multi-Edition Comparison
         st.divider()
-        st.header("⚖️ Platform Edition Comparison")
+        st.header("⚖️ Platform Edition Comparison (Base vs +ACM)")
         rhel_savings = len(data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]) * rhel_list_price
 
         comparison = []
         pricing_map = {
-            "OVE (Essentials)": price_ove,
-            "OKE (Engine)": price_oke,
-            "OCP (Platform)": price_ocp,
-            "OPP (Plus)": price_opp
+            "OVE (Essentials)": {"base": price_ove, "acm": price_acm_virt},
+            "OKE (Engine)": {"base": price_oke, "acm": price_acm_k8s},
+            "OCP (Platform)": {"base": price_ocp, "acm": price_acm_k8s},
+            "OPP (Plus)": {"base": price_opp, "acm": 0} # Included
         }
 
-        for ed, sub_price in pricing_map.items():
-            annual_sub = req_nodes * sub_price
-            # Operational efficiency logic
-            efficiency_gain = 0.9 if "Plus" in ed else 0.4
+        for ed, prices in pricing_map.items():
+            base_annual = req_nodes * prices['base']
+            acm_annual = req_nodes * prices['acm']
+
+            # Efficiency logic: ACM significantly improves automation ROI
+            efficiency_gain = 0.9 if (prices['acm'] > 0 or "Plus" in ed) else 0.4
             hrly_savings = (fte_rate * 12 * 80) * efficiency_gain
-            net_impact = annual_sub - rhel_savings - hrly_savings
+
+            # Logic to show the selected configuration impact
+            total_sub = base_annual + (acm_annual if (include_acm and ed in target_edition) or "Plus" in ed else 0)
+            net_impact = total_sub - rhel_savings - hrly_savings
 
             comparison.append({
                 "Edition": ed,
-                "Subscription": f"${annual_sub:,.0f}",
-                "RHEL Dividend": f"-${rhel_savings:,.0f}",
+                "Base Subscription": f"${base_annual:,.0f}",
+                "ACM Add-on Cost": f"${acm_annual:,.0f}" if prices['acm'] > 0 else "Included",
                 "Net Annual Impact": f"${int(net_impact):,}"
             })
         st.table(pd.DataFrame(comparison))
@@ -196,12 +212,16 @@ if uploaded_file:
         st.divider()
         st.header("📈 5-Year Cumulative TCO Projection")
 
-        selected_sub_annual = req_nodes * pricing_map[target_edition]
+        # Calculate selected subscription annual cost including ACM if toggled
+        selected_base_price = pricing_map[target_edition]['base']
+        selected_acm_price = pricing_map[target_edition]['acm'] if include_acm else 0
+        selected_sub_annual = req_nodes * (selected_base_price + selected_acm_price)
+
         selected_stg_annual = total_disk_tb * stg_price_tb
 
         vmw_5yr = [vmw_annual_tco * i for i in range(1, 6)]
         ocp_5yr = []
-        current_ocp = (total_vms * 8 * fte_rate) # One-time migration effort
+        current_ocp = (total_vms * 8 * fte_rate)
 
         for i in range(1, 6):
             current_ocp += (selected_sub_annual + selected_stg_annual - rhel_savings)
@@ -209,7 +229,7 @@ if uploaded_file:
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=vmw_5yr, name="Current VMware (Estimated)", line=dict(color='#6A6E73', width=2, dash='dash')))
-        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=ocp_5yr, name=f"Target {target_edition}", line=dict(color='#EE0000', width=4)))
+        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=ocp_5yr, name=f"Target {target_edition} {'+ ACM' if include_acm and 'Plus' not in target_edition else ''}", line=dict(color='#EE0000', width=4)))
         fig.update_layout(xaxis_title="Year", yaxis_title="Total Spend ($)")
         st.plotly_chart(fig, use_container_width=True)
 
@@ -218,7 +238,7 @@ if uploaded_file:
         m_dict = {'vms': total_vms, 'cpus': int(total_vcpus), 'storage_tb': total_disk_tb, 'ratio': cpu_ratio}
         f_dict = {'savings': vmw_5yr[-1] - ocp_5yr[-1], 'licensing_red': annual_vmw_licensing - selected_sub_annual}
 
-        pdf_bytes = generate_pdf_report(cust_name, m_dict, f_dict, req_nodes, target_edition)
+        pdf_bytes = generate_pdf_report(cust_name, m_dict, f_dict, req_nodes, target_edition, include_acm)
 
         st.download_button(
             label="📄 Download Detailed Executive Report",
