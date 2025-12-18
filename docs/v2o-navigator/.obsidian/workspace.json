@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Troubleshooting & Common Errors.md",
+                "file": "07 - Containerization & OpenShift.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Troubleshooting & Common Errors"
+              "title": "07 - Containerization & OpenShift"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Troubleshooting & Common Errors.md",
+                "file": "07 - Containerization & OpenShift.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Troubleshooting & Common Errors"
+              "title": "Backlinks for 07 - Containerization & OpenShift"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Troubleshooting & Common Errors.md",
+                "file": "07 - Containerization & OpenShift.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Troubleshooting & Common Errors"
+              "title": "Outgoing links from 07 - Containerization & OpenShift"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Troubleshooting & Common Errors.md",
+                "file": "07 - Containerization & OpenShift.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Troubleshooting & Common Errors"
+              "title": "Outline of 07 - Containerization & OpenShift"
             }
           }
         ]
@@ -185,8 +185,9 @@
   },
   "active": "c8c255fb82cadb31",
   "lastOpenFiles": [
-    "00 - Presentation Guide -  Using the V2O Navigator.md",
     "Troubleshooting & Common Errors.md",
+    "07 - Containerization & OpenShift.md",
+    "00 - Presentation Guide -  Using the V2O Navigator.md",
     "05 - People and Process Transformation.md",
     "06 - The 5-Year TCO Analysis.md",
     "03 - OpenShift Sizing Logic.md",
