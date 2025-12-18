@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "01 - The Tech Stack.md",
+                "file": "02 - RVTools Parsing Logic.md.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "01 - The Tech Stack"
+              "title": "02 - RVTools Parsing Logic.md"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "01 - The Tech Stack.md",
+                "file": "02 - RVTools Parsing Logic.md.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 01 - The Tech Stack"
+              "title": "Backlinks for 02 - RVTools Parsing Logic.md"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "01 - The Tech Stack.md",
+                "file": "02 - RVTools Parsing Logic.md.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 01 - The Tech Stack"
+              "title": "Outgoing links from 02 - RVTools Parsing Logic.md"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "01 - The Tech Stack.md",
+                "file": "02 - RVTools Parsing Logic.md.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 01 - The Tech Stack"
+              "title": "Outline of 02 - RVTools Parsing Logic.md"
             }
           }
         ]
@@ -185,7 +185,8 @@
   },
   "active": "c8c255fb82cadb31",
   "lastOpenFiles": [
-    "Welcome.md",
-    "01 - The Tech Stack.md"
+    "01 - The Tech Stack.md",
+    "02 - RVTools Parsing Logic.md.md",
+    "Welcome.md"
   ]
 }
