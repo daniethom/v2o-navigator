@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom Red Hat-inspired styling for the metric cards
+# Custom Red Hat-inspired styling
 st.markdown("""
     <style>
     .stMetric { background-color: #ffffff; padding: 20px; border-radius: 10px; border-left: 5px solid #EE0000; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
@@ -43,7 +43,7 @@ def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
     pdf.multi_cell(0, 10, f"This report outlines the technical and financial impact of migrating from a legacy virtualization estate to an enterprise container platform ({edition}).")
     pdf.ln(5)
 
-    # Tables for Data
+    # Data Table
     pdf.set_font("Arial", "B", 12)
     pdf.cell(95, 10, "Current Inventory Metrics", border=1)
     pdf.cell(95, 10, "Target Architecture", border=1, ln=True)
@@ -58,53 +58,49 @@ def generate_pdf_report(cust_name, metrics, financials, nodes, edition):
 
     pdf.ln(10)
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Financial Outcomes (5-Year Forecast)", ln=True)
+    pdf.cell(0, 10, "Financial Projection (5-Year Forecast)", ln=True)
     pdf.set_font("Arial", "", 12)
     pdf.cell(0, 10, f"- Projected Net Savings: ${financials['savings']:,.0f}", ln=True)
     pdf.cell(0, 10, f"- Est. Annual Licensing Reduction: ${financials['licensing_red']:,.0f}", ln=True)
-    pdf.cell(0, 10, f"- Operational Efficiency Gain: {financials['hrs_saved']} hours/month", ln=True)
 
-    return pdf.output(dest='S')
+    return bytes(pdf.output())
 
-# --- DATA PROCESSING ---
+# --- RESILIENT DATA PROCESSING ---
 
 def process_rvtools(file):
-    """Parses RVTools vInfo, captures Compute and Storage data."""
+    """Parses RVTools vInfo with specific logic for 'Disk Capacity' vs 'Disk Count'."""
     try:
         df = pd.read_csv(file)
-        df.columns = df.columns.str.strip()
+        df.columns = [str(c).strip() for c in df.columns]
 
-        # Robust column mapping
-        mapping = {
-            'VM': 'VM',
-            'CPUs': 'CPUs',
-            'Memory': 'Memory',
-            'OS': 'OS according to the configuration file',
-            'Disk': 'Total disk capacity MiB'
-        }
+        mapping = {}
+        mapping['VM'] = next((c for c in df.columns if c.lower() in ['vm', 'virtual machine']), None)
+        mapping['CPUs'] = next((c for c in df.columns if c.lower() in ['cpus', 'vcpu']), None)
+        mapping['Memory'] = next((c for c in df.columns if 'memory' in c.lower()), None)
+        mapping['OS'] = next((c for c in df.columns if 'os according to' in c.lower() or c.lower() == 'os'), None)
 
-        # Fuzzy search for columns if exact match fails
-        for key, expected in mapping.items():
-            if expected not in df.columns:
-                found = [col for col in df.columns if key in col]
-                mapping[key] = found[0] if found else expected
+        # Hyper-specific Disk Capacity Search
+        mapping['Disk'] = next((c for c in df.columns if ('capacity' in c.lower() or 'mib' in c.lower()) and 'disk' in c.lower()), None)
 
-        # Cleaning and conversion
+        for key, value in mapping.items():
+            if value is None:
+                st.error(f"❌ Could not find a reliable column for **{key}**.")
+                return None
+
         df_clean = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS'], mapping['Disk']]].copy()
         df_clean.columns = ['VM', 'CPUs', 'Memory', 'OS', 'Disk_MiB']
 
         for col in ['CPUs', 'Memory', 'Disk_MiB']:
-            df_clean[col] = df_clean[col].astype(str).str.replace(',', '').astype(float)
+            df_clean[col] = df_clean[col].astype(str).str.replace(',', '').replace('nan', '0')
+            df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(0)
 
-        # Add a TB column for storage
-        df_clean['Disk_TB'] = df_clean['Disk_MiB'] / 1024 / 1024
-
+        df_clean['Disk_TB'] = df_clean['Disk_MiB'] / 1048576
         return df_clean
     except Exception as e:
-        st.error(f"Error parsing RVTools file: {e}")
+        st.error(f"⚠️ Error processing CSV: {e}")
         return None
 
-# --- SIDEBAR: ADVANCED COSTING ---
+# --- SIDEBAR: INPUTS ---
 
 with st.sidebar:
     st.image("https://www.redhat.com/cms/managed-files/Logo-RedHat-OpenShift-A-Standard-RGB.png", width=200)
@@ -119,13 +115,9 @@ with st.sidebar:
 
     st.divider()
     st.header("2. Real-World Costing")
-    vmw_model = st.selectbox("Current Licensing Model", ["VCF (Subscription)", "VVF (Subscription)", "Legacy ELA"])
-    vmw_core_price = st.number_input(f"Annual {vmw_model} Price / Core ($)", value=350 if "VCF" in vmw_model else 200)
-
-    st.divider()
-    st.header("3. Storage & Solution")
-    storage_provider = st.selectbox("Storage Target", ["ODF (Native)", "NetApp Trident", "Portworx", "IBM Ceph"])
-    stg_price_tb = st.number_input(f"Annual {storage_provider} Price / TB ($)", value=150)
+    vmw_model = st.selectbox("VMware Model", ["VCF (Subscription)", "VVF (Subscription)", "Legacy ELA"])
+    vmw_core_price = st.number_input(f"Annual {vmw_model} Price / Core ($)", value=350)
+    stg_price_tb = st.number_input("Annual Storage Price / TB ($)", value=150)
 
     target_edition = st.selectbox("Proposed Edition", ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"])
 
@@ -137,9 +129,8 @@ if uploaded_file:
     if data is not None:
         cust_name = uploaded_file.name.split('.')[0]
 
-        # A. Current Estate Metrics
-        total_vms = len(data)
-        total_vcpus = data['CPUs'].sum()
+        # A. Summary Metrics
+        total_vms, total_vcpus = len(data), data['CPUs'].sum()
         total_ram_gb = data['Memory'].sum() / 1024
         total_disk_tb = data['Disk_TB'].sum()
 
@@ -150,71 +141,64 @@ if uploaded_file:
         c3.metric("Total RAM (GB)", f"{total_ram_gb:,.0f}")
         c4.metric("Total Storage (TB)", f"{total_disk_tb:,.1f}")
 
-        # B. Financial Baseline (VMware VCF/VVF logic)
-        # Assuming 16-core minimum per host for VCF/VVF pricing models
+        # B. Financial Baseline (VMware)
         est_physical_cores = max(total_vcpus / cpu_ratio, total_vms * 2)
         annual_vmw_licensing = est_physical_cores * vmw_core_price
-        annual_vmw_storage = total_disk_tb * (stg_price_tb * 1.2) # Assuming legacy storage is 20% more expensive
+        annual_vmw_storage = total_disk_tb * (stg_price_tb * 1.2)
         vmw_annual_tco = annual_vmw_licensing + annual_vmw_storage
 
         # C. Target Architecture Sizing
         n_cores, n_ram = (16, 64) if "Standard" in node_size else (32, 128) if "Large" in node_size else (64, 256)
         req_nodes = int(max((total_vcpus/cpu_ratio)/n_cores, total_ram_gb/n_ram)) + 1
 
-        # D. RHEL Savings
-        rhel_vms = data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]
-        num_rhel = len(rhel_vms)
-        rhel_annual_savings = num_rhel * 800
-
-        # E. Multi-Edition "What-If" Analysis
+        # D. Multi-Edition Analysis
         st.divider()
         st.header("⚖️ Platform Edition Comparison")
+        rhel_savings = len(data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]) * 800
 
-        comparison_list = []
+        comparison = []
         for ed in ["OVE (Essentials)", "OKE (Engine)", "OCP (Platform)", "OPP (Plus)"]:
             sub_price = 1500 if "OVE" in ed else 2200 if "OKE" in ed else 3200 if "OCP" in ed else 4800
             annual_sub = req_nodes * sub_price
-
-            # Efficiency logic: OPP (Platform Plus) with ACM saves much more time
             efficiency_gain = 0.9 if "Plus" in ed else 0.4
-            hrly_savings = (80 * 12 * 80) * efficiency_gain # Placeholder for operational hrs saved
+            hrly_savings = (80 * 12 * 80) * efficiency_gain
+            net_impact = annual_sub - rhel_savings - hrly_savings
 
-            net_impact = annual_sub - rhel_annual_savings - hrly_savings
-
-            comparison_list.append({
+            comparison.append({
                 "Edition": ed,
                 "Subscription": f"${annual_sub:,.0f}",
-                "RHEL Dividend": f"-${rhel_annual_savings:,.0f}",
+                "RHEL Dividend": f"-${rhel_savings:,.0f}",
                 "Net Annual Impact": f"${int(net_impact):,}"
             })
+        st.table(pd.DataFrame(comparison))
 
-        st.table(pd.DataFrame(comparison_list))
-
-        # F. 5-Year Cumulative TCO Chart
+        # E. 5-Year Cumulative TCO Projection
         st.divider()
         st.header("📈 5-Year Cumulative TCO Projection")
 
-        # Selected Edition Pricing
-        selected_sub_annual = req_nodes * (4800 if "Plus" in target_edition else 3200)
+        # Use target edition price from comparison logic
+        target_sub_price = 4800 if "Plus" in target_edition else 3200 if "Platform" in target_edition else 2200 if "Engine" in target_edition else 1500
+        selected_sub_annual = req_nodes * target_sub_price
         selected_stg_annual = total_disk_tb * stg_price_tb
 
         vmw_5yr = [vmw_annual_tco * i for i in range(1, 6)]
         ocp_5yr = []
-        current_ocp = (total_vms * 8 * 80) # Migration cost
+        current_ocp = (total_vms * 8 * 80) # One-time migration effort
+
         for i in range(1, 6):
-            current_ocp += (selected_sub_annual + selected_stg_annual - rhel_annual_savings)
+            current_ocp += (selected_sub_annual + selected_stg_annual - rhel_savings)
             ocp_5yr.append(current_ocp)
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=vmw_5yr, name="Current VMware (VCF/VVF)", line=dict(color='#6A6E73', width=2, dash='dash')))
+        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=vmw_5yr, name="Current VMware (Estimated)", line=dict(color='#6A6E73', width=2, dash='dash')))
         fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=ocp_5yr, name=f"Target {target_edition}", line=dict(color='#EE0000', width=4)))
         fig.update_layout(xaxis_title="Year", yaxis_title="Total Spend ($)")
         st.plotly_chart(fig, use_container_width=True)
 
-        # G. Export
+        # F. Export to PDF
         st.divider()
         metrics_dict = {'vms': total_vms, 'cpus': int(total_vcpus), 'storage_tb': total_disk_tb, 'ratio': cpu_ratio}
-        finance_dict = {'savings': vmw_5yr[-1] - ocp_5yr[-1], 'licensing_red': annual_vmw_licensing - selected_sub_annual, 'hrs_saved': 80}
+        finance_dict = {'savings': vmw_5yr[-1] - ocp_5yr[-1], 'licensing_red': annual_vmw_licensing - selected_sub_annual}
 
         pdf_bytes = generate_pdf_report(cust_name, metrics_dict, finance_dict, req_nodes, target_edition)
 
@@ -225,4 +209,4 @@ if uploaded_file:
             mime="application/pdf"
         )
 else:
-    st.info("👋 **Welcome to V2O Navigator.** Please upload your RVTools `vInfo` CSV in the sidebar to begin.")
+    st.info("👋 **Welcome.** Please upload an RVTools `vInfo` CSV in the sidebar to begin.")
