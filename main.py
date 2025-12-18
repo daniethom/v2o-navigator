@@ -1,45 +1,66 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 
-# --- INITIAL SETUP ---
-st.set_page_config(page_title="V2O Navigator", layout="wide", page_icon="🚀")
-st.title("🚀 V2O Navigator: VMware to OpenShift Specialist Tool")
+# --- INITIAL SETUP & THEMING ---
+st.set_page_config(
+    page_title="V2O Navigator | VMware to OpenShift",
+    page_icon="🚀",
+    layout="wide"
+)
 
-# --- FUNCTIONS ---
+# Custom CSS to align with Red Hat branding
+st.markdown("""
+    <style>
+    .main { background-color: #f0f0f0; }
+    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; border-left: 5px solid #EE0000; }
+    </style>
+    """, unsafe_allow_none=True)
+
+# --- HELPER FUNCTIONS ---
 
 def process_rvtools(file):
-    """Parses RVTools vInfo CSV, cleans data, and handles formatting."""
-    df = pd.read_csv(file)
-    df.columns = df.columns.str.strip()
+    """Parses RVTools vInfo CSV, cleans headers, and handles numeric formatting."""
+    try:
+        df = pd.read_csv(file)
+        df.columns = df.columns.str.strip()
 
-    mapping = {
-        'VM': 'VM',
-        'CPUs': 'CPUs',
-        'Memory': 'Memory',
-        'OS': 'OS according to the configuration file'
-    }
+        # Resilient mapping for different RVTools versions
+        mapping = {
+            'VM': 'VM',
+            'CPUs': 'CPUs',
+            'Memory': 'Memory',
+            'OS': 'OS according to the configuration file'
+        }
 
-    for key, expected in mapping.items():
-        if expected not in df.columns:
-            found = [col for col in df.columns if key in col]
-            if found:
-                mapping[key] = found[0]
-            else:
-                st.error(f"Could not find a column for {key}.")
-                return None
+        for key, expected in mapping.items():
+            if expected not in df.columns:
+                found = [col for col in df.columns if key in col]
+                if found:
+                    mapping[key] = found[0]
+                else:
+                    st.error(f"Required column '{key}' not found. Please check CSV headers.")
+                    return None
 
-    df = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS']]]
-    df.columns = ['VM', 'CPUs', 'Memory', 'OS']
+        # Extract and Rename
+        df = df[[mapping['VM'], mapping['CPUs'], mapping['Memory'], mapping['OS']]]
+        df.columns = ['VM', 'CPUs', 'Memory', 'OS']
 
-    # Clean numeric data (handle commas)
-    for col in ['CPUs', 'Memory']:
-        df[col] = df[col].astype(str).str.replace(',', '').astype(float)
+        # Clean numeric data: Remove commas and convert to float
+        for col in ['CPUs', 'Memory']:
+            df[col] = df[col].astype(str).str.replace(',', '').astype(float)
 
-    return df
+        return df
+    except Exception as e:
+        st.error(f"Error processing file: {e}")
+        return None
 
-# --- SIDEBAR: INPUTS & ASSUMPTIONS ---
+# --- SIDEBAR: CONFIGURATION ---
 
 with st.sidebar:
+    st.image("https://www.redhat.com/cms/managed-files/Logo-RedHat-OpenShift-A-Standard-RGB.png", width=200)
+    st.title("V2O Navigator")
+
     st.header("1. Data Ingestion")
     uploaded_file = st.file_uploader("Upload RVTools vInfo CSV", type=["csv"])
 
@@ -47,7 +68,7 @@ with st.sidebar:
 
     st.header("2. Sizing Assumptions")
     cpu_ratio = st.slider("vCPU Consolidation Ratio", 1.0, 6.0, 3.0,
-                          help="Ratio of VM vCPUs to Physical Cores.")
+                          help="Number of VM vCPUs per Physical Core.")
 
     node_type = st.selectbox("Worker Node Size",
                              ["Standard (16 vCPU | 64GB RAM)",
@@ -56,104 +77,116 @@ with st.sidebar:
 
     st.divider()
 
-    st.header("3. Solution Mapping")
-    storage_option = st.selectbox("Storage Provider",
-                                  ["OpenShift Data Foundation (ODF)", "NetApp Trident", "Portworx", "IBM Ceph"])
+    st.header("3. Solution & Finance")
+    storage_option = st.selectbox("Storage Solution", ["ODF (Native)", "NetApp Trident", "Portworx", "IBM Ceph"])
+    edition = st.selectbox("OpenShift Edition", ["OVE (Virtualization)", "OKE (Engine)", "OCP (Platform)", "OPP (Platform Plus)"])
 
-# --- MAIN DASHBOARD LOGIC ---
+    annual_vmware_cost = st.number_input("Current Annual VMware Spend ($)", value=100000, step=1000)
+    fte_rate = st.number_input("FTE Hourly Rate ($)", value=80)
+
+# --- MAIN DASHBOARD ---
 
 if uploaded_file:
     data = process_rvtools(uploaded_file)
 
     if data is not None:
-        # A. Current Estate Summary
+        # A. Summary Metrics
         total_vms = len(data)
         total_cpus = data['CPUs'].sum()
         total_ram_gb = data['Memory'].sum() / 1024
 
-        st.header("📋 Current VMware Estate Summary")
-        m1, m2, m3 = st.columns(3)
+        st.header(f"📊 Estate Analysis: {uploaded_file.name}")
+        m1, m2, m3, m4 = st.columns(4)
         m1.metric("Total VMs", total_vms)
         m2.metric("Total vCPUs", int(total_cpus))
         m3.metric("Total RAM (GB)", f"{total_ram_gb:,.0f}")
 
-        # B. RHEL Savings Calculation
+        # RHEL Savings
         rhel_vms = data[data['OS'].str.contains("Red Hat|RHEL", case=False, na=False)]
         num_rhel = len(rhel_vms)
-        rhel_savings = num_rhel * 800 # Est. list price per guest
+        rhel_annual_savings = num_rhel * 800
+        m4.metric("Annual RHEL Savings", f"${rhel_annual_savings:,}")
 
-        st.header("💰 Financial Benefits")
-        c1, c2 = st.columns(2)
-        c1.metric("Detected RHEL Guests", num_rhel)
-        c2.metric("Annual RHEL Savings", f"${rhel_savings:,}")
-        st.caption("Note: OpenShift subscriptions include RHEL entitlements for nodes.")
-
-        # C. Target Sizing Logic
+        # B. OpenShift Sizing Logic
         if "Standard" in node_type:
-            node_cores, node_ram = 16, 64
+            n_cores, n_ram = 16, 64
         elif "Large" in node_type:
-            node_cores, node_ram = 32, 128
+            n_cores, n_ram = 32, 128
         else:
-            node_cores, node_ram = 64, 256
+            n_cores, n_ram = 64, 256
 
-        req_cores = total_cpus / cpu_ratio
-        nodes_by_cpu = req_cores / node_cores
-        nodes_by_ram = total_ram_gb / node_ram
-        final_worker_nodes = int(max(nodes_by_cpu, nodes_by_ram)) + 1
+        eff_cores_req = total_cpus / cpu_ratio
+        nodes_by_cpu = eff_cores_req / n_cores
+        nodes_by_ram = total_ram_gb / n_ram
+        worker_nodes = int(max(nodes_by_cpu, nodes_by_ram)) + 1 # N+1 for HA
 
-        st.header(f"🎯 Target OpenShift Cluster ({storage_option})")
-        s1, s2, s3 = st.columns(3)
-        s1.metric("Required Cores", f"{req_cores:.1f}")
-        s2.metric("Worker Nodes (N+1)", final_worker_nodes)
-        s3.metric("Target Storage", storage_option)
-
-        # D. Edition Table
         st.divider()
-        st.subheader("OpenShift Edition Comparison")
-        editions = {
-            "Edition": ["OVE", "OKE", "OCP", "OPP (Plus)"],
-            "ACM Included?": ["No", "No", "No", "✅ Yes"],
-            "Use Case": ["VM Focus", "Base K8s", "Full Dev Stack", "Enterprise Multi-Cluster"]
-        }
-        st.table(pd.DataFrame(editions))
+        st.header("🏗️ Proposed OpenShift Architecture")
 
-        with st.expander("View Cleaned Data Source"):
-            st.dataframe(data)
-        # --- E. PEOPLE & PROCESS ENHANCEMENTS ---
+        c1, c2, c3 = st.columns(3)
+        c1.write(f"**Target Edition:** {edition}")
+        c1.write(f"**Storage:** {storage_option}")
+
+        c2.metric("Worker Nodes (N+1)", worker_nodes)
+        c3.metric("Control Plane Nodes", 3)
+
+        # C. People & Process Efficiency
         st.divider()
         st.header("👥 People & Process Transformation")
 
-        st.write("""
-        Moving to OpenShift with **ACM (Advanced Cluster Management)** shifts your team from
-        'Ticket-driven infrastructure' to 'Policy-driven automation'.
-        """)
-
-        # Define some industry average "Time per Task" (in hours)
         tasks = {
-            "Task": ["Provisioning Environment", "Security Patching (Monthly)", "Compliance Auditing"],
-            "Legacy (Manual)": [16.0, 40.0, 24.0],
-            "OpenShift (ACM/GitOps)": [0.5, 4.0, 2.0]
+            "Operational Task": ["Provisioning", "Patching", "Compliance Audit"],
+            "Legacy Manual (Hrs)": [16, 40, 24],
+            "OpenShift + ACM (Hrs)": [0.5, 4, 2]
         }
+        pdf = pd.DataFrame(tasks)
+        monthly_hours_saved = pdf["Legacy Manual (Hrs)"].sum() - pdf["OpenShift + ACM (Hrs)"].sum()
 
-        process_df = pd.DataFrame(tasks)
+        col_t1, col_t2 = st.columns([2, 1])
+        col_t1.table(pdf)
+        col_t2.metric("Monthly Hours Reclaimed", f"{monthly_hours_saved} hrs")
+        col_t2.write(f"Equivalent to **{round((monthly_hours_saved * 12)/1920, 1)} FTEs** per year.")
 
-        # Calculate totals
-        legacy_total = process_df["Legacy (Manual)"].sum()
-        openshift_total = process_df["OpenShift (ACM/GitOps)"].sum()
-        hours_saved_monthly = legacy_total - openshift_total
+        # D. 5-Year TCO Summary
+        st.divider()
+        st.header("📈 5-Year TCO Projection")
 
-        col_p1, col_p2 = st.columns(2)
+        # Financial Logic
+        ocp_sub_price = 2500 if "Plus" not in edition else 3500
+        annual_ocp_sub = (worker_nodes * ocp_sub_price)
+        annual_op_savings = (monthly_hours_saved * 12 * fte_rate)
 
-        with col_p1:
-            st.subheader("Operational Efficiency")
-            st.table(process_df)
+        # VMware Baseline
+        vmw_tco = [annual_vmware_cost * i for i in range(1, 6)]
 
-        with col_p2:
-            st.subheader("The 'Innovation Fund'")
-            st.metric("Monthly Hours Reclaimed", f"{hours_saved_monthly} Hours")
-            st.metric("Yearly Efficiency Gain", f"{hours_saved_monthly * 12} Hours")
-            st.write(f"🚀 This is equivalent to **{round((hours_saved_monthly * 12) / 1920, 1)} Full-Time Employees** redirected from 'Run' to 'Build'.")
+        # OpenShift TCO (Year 1 includes migration effort)
+        migration_effort_cost = (total_vms * 8 * fte_rate) # 8 hours per VM average
+        ocp_net_annual = annual_ocp_sub - rhel_annual_savings - annual_op_savings
 
-        st.info("💡 **ACM Benefit:** By using ACM, you can apply security policies to 100 clusters as easily as 1, eliminating the linear growth of Ops staff.")    
+        ocp_tco = []
+        current_ocp_spend = migration_effort_cost
+        for i in range(1, 6):
+            current_ocp_spend += max(0, (annual_ocp_sub - rhel_annual_savings)) # Licensing cost minus RHEL
+            ocp_tco.append(current_ocp_spend)
+
+        # Plotly Chart
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=vmw_tco, name="VMware (As-Is)", line=dict(color='#6A6E73', width=2, dash='dash')))
+        fig.add_trace(go.Scatter(x=[1,2,3,4,5], y=ocp_tco, name="OpenShift (To-Be)", line=dict(color='#EE0000', width=4)))
+
+        fig.update_layout(xaxis_title="Year", yaxis_title="Cumulative Cost ($)", hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Final ROI metrics
+        total_savings = vmw_tco[-1] - ocp_tco[-1]
+        r1, r2, r3 = st.columns(3)
+        r1.metric("5-Year Net Savings", f"${int(total_savings):,}")
+        r2.metric("Estimated ROI", f"{int((total_savings / ocp_tco[-1])*100)}%")
+        r3.metric("Payback Period", "Year 2" if ocp_tco[1] < vmw_tco[1] else "Year 3")
+
+        with st.expander("🔍 View Processed Data"):
+            st.dataframe(data)
+
 else:
-    st.info("Please upload a vInfo CSV to begin the migration analysis.")
+    st.info("👋 **Welcome Specialist!** Please upload an RVTools `vInfo` CSV to begin the migration ROI analysis.")
+    st.image("https://www.redhat.com/cms/managed-files/styles/xlarge/s3/2022-04/Management-Architecture-Diagram.png?itok=6lO_VjI_", caption="ACM Multi-Cluster Management Architecture")

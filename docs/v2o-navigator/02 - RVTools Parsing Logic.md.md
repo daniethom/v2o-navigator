@@ -1,4 +1,4 @@
-# Module 2: RVTools Parsing Logic
+
 
 ## Why RVTools?
 RVTools is the industry standard for VMware inventory. For an OpenShift Tech Sales specialist, it provides the "Ground Truth" needed to size a cluster and calculate ROI.

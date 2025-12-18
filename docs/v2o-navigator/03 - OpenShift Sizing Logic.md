@@ -1,5 +1,4 @@
 
-# Module 3: OpenShift Sizing & Consolidation
 
 ## The "Density Dividend"
 The biggest driver of ROI when moving from VMware to OpenShift is **Density**. 

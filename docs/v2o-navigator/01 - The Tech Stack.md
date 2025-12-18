@@ -1,4 +1,4 @@
-# Module 1: The Tech Stack
+
 This project uses a modern, high-performance stack for rapid prototyping.
 
 ## 1. Python & `uv`
