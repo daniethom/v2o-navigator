@@ -119,5 +119,41 @@ if uploaded_file:
 
         with st.expander("View Cleaned Data Source"):
             st.dataframe(data)
+        # --- E. PEOPLE & PROCESS ENHANCEMENTS ---
+        st.divider()
+        st.header("👥 People & Process Transformation")
+
+        st.write("""
+        Moving to OpenShift with **ACM (Advanced Cluster Management)** shifts your team from
+        'Ticket-driven infrastructure' to 'Policy-driven automation'.
+        """)
+
+        # Define some industry average "Time per Task" (in hours)
+        tasks = {
+            "Task": ["Provisioning Environment", "Security Patching (Monthly)", "Compliance Auditing"],
+            "Legacy (Manual)": [16.0, 40.0, 24.0],
+            "OpenShift (ACM/GitOps)": [0.5, 4.0, 2.0]
+        }
+
+        process_df = pd.DataFrame(tasks)
+
+        # Calculate totals
+        legacy_total = process_df["Legacy (Manual)"].sum()
+        openshift_total = process_df["OpenShift (ACM/GitOps)"].sum()
+        hours_saved_monthly = legacy_total - openshift_total
+
+        col_p1, col_p2 = st.columns(2)
+
+        with col_p1:
+            st.subheader("Operational Efficiency")
+            st.table(process_df)
+
+        with col_p2:
+            st.subheader("The 'Innovation Fund'")
+            st.metric("Monthly Hours Reclaimed", f"{hours_saved_monthly} Hours")
+            st.metric("Yearly Efficiency Gain", f"{hours_saved_monthly * 12} Hours")
+            st.write(f"🚀 This is equivalent to **{round((hours_saved_monthly * 12) / 1920, 1)} Full-Time Employees** redirected from 'Run' to 'Build'.")
+
+        st.info("💡 **ACM Benefit:** By using ACM, you can apply security policies to 100 clusters as easily as 1, eliminating the linear growth of Ops staff.")    
 else:
     st.info("Please upload a vInfo CSV to begin the migration analysis.")
